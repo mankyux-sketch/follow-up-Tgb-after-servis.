@@ -12,13 +12,43 @@ function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&l
 function navigate(id){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active-view',v.id===id));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));if(id==='dashboard')renderDashboard()}
 document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>navigate(b.dataset.view));document.getElementById('menuToggle').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
 function renderAll(){renderFollow();renderBatches();renderTemplates();renderDashboard();renderSAFilter()}
-function renderDashboard(){const total=db.records.length, followed=db.records.filter(r=>r.followedAt).length, booking=db.records.filter(r=>r.booking).length, success=db.records.filter(r=>r.result==='Berhasil dihubungi'||r.booking).length, pending=total-followed;set('kpiTotal',total);set('kpiFollowed',followed);set('kpiSuccess',success);set('kpiBooking',booking);set('kpiPending',pending);set('kpiFollowRate',pct(followed,total));set('kpiSuccessRate',pct(success,followed));set('kpiBookingRate',pct(booking,followed));
- const statusData=[pending,Math.max(followed-booking,0),booking];makeChart('statusChart','doughnut',['Belum Follow Up','Sudah Follow Up','Booking'],statusData);
- const reasonMap={};db.records.filter(r=>r.followedAt).forEach(r=>{const k=r.result||'Tanpa hasil';reasonMap[k]=(reasonMap[k]||0)+1});makeChart('reasonChart','bar',Object.keys(reasonMap),Object.values(reasonMap));
- const sa={};db.records.forEach(r=>{const k=r.sa||'Tanpa SA';if(!sa[k])sa[k]={total:0,follow:0,book:0};sa[k].total++;if(r.followedAt)sa[k].follow++;if(r.booking)sa[k].book++});const labels=Object.keys(sa);makeChartMulti('saChart',labels,[{label:'Follow Up',data:labels.map(k=>sa[k].follow)},{label:'Booking',data:labels.map(k=>sa[k].book)}]);}
-function pct(a,b){return b?Math.round(a/b*100)+'%':'0%'}function set(id,v){document.getElementById(id).textContent=v}
-function makeChart(id,type,labels,data){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),{type,data:{labels,datasets:[{data,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:type==='doughnut',position:'bottom'}}}})}
-function makeChartMulti(id,labels,datasets){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}})}
+function renderDashboard(){
+ const total=db.records.length;
+ const followed=db.records.filter(r=>r.followedAt).length;
+ const booking=db.records.filter(r=>r.booking).length;
+ const success=db.records.filter(r=>r.followedAt&&(r.result==='Berhasil dihubungi'||r.result==='Booking'||r.booking)).length;
+ const pending=Math.max(total-followed,0);
+ set('kpiTotal',total);set('kpiFollowed',followed);set('kpiSuccess',success);set('kpiBooking',booking);set('kpiPending',pending);
+ set('kpiFollowRate',pct(followed,total));set('kpiSuccessRate',pct(success,followed));set('kpiBookingRate',pct(booking,followed));
+
+ makeStatusChart(followed,pending);
+ makeResultChart();
+ makeSAChart();
+}
+function pct(a,b){return b?Math.round(a/b*100)+'%':'0%'}
+function set(id,v){const el=document.getElementById(id);if(el)el.textContent=v}
+function makeStatusChart(followed,pending){
+ const id='statusChart';if(charts[id])charts[id].destroy();
+ const ctx=document.getElementById(id);
+ charts[id]=new Chart(ctx,{type:'doughnut',data:{labels:['Sudah Follow Up','Belum Follow Up'],datasets:[{data:[followed,pending],backgroundColor:['#2563eb','#f97316'],borderColor:'#ffffff',borderWidth:4,hoverOffset:5}]},options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:true,position:'bottom',labels:{usePointStyle:true,boxWidth:9,padding:18}},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} customer`}}}}});
+ const summary=document.getElementById('statusSummary');
+ if(summary)summary.innerHTML=`<span><i style="background:#2563eb"></i><b>${followed}</b> Sudah FU</span><span><i style="background:#f97316"></i><b>${pending}</b> Belum FU</span>`;
+}
+function makeResultChart(){
+ const id='reasonChart';if(charts[id])charts[id].destroy();
+ const followed=db.records.filter(r=>r.followedAt);
+ const resultMap={};followed.forEach(r=>{const k=r.booking?'Booking':(r.result||'Tanpa hasil');resultMap[k]=(resultMap[k]||0)+1});
+ const labels=Object.keys(resultMap),data=Object.values(resultMap);
+ const empty=document.getElementById('resultEmpty');
+ if(!labels.length){if(empty)empty.classList.remove('hidden');return}else if(empty)empty.classList.add('hidden');
+ charts[id]=new Chart(document.getElementById(id),{type:'bar',data:{labels,datasets:[{label:'Customer',data,backgroundColor:'#60a5fa',borderRadius:8,borderSkipped:false,barThickness:24}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} customer`}}},scales:{x:{beginAtZero:true,ticks:{precision:0,stepSize:1},grid:{color:'#eef2f7'}},y:{grid:{display:false}}}}});
+}
+function makeSAChart(){
+ const id='saChart';if(charts[id])charts[id].destroy();
+ const sa={};db.records.forEach(r=>{const k=r.sa||'Tanpa SA';if(!sa[k])sa[k]={total:0,follow:0,success:0,book:0};sa[k].total++;if(r.followedAt)sa[k].follow++;if(r.followedAt&&(r.result==='Berhasil dihubungi'||r.result==='Booking'||r.booking))sa[k].success++;if(r.booking)sa[k].book++});
+ const labels=Object.keys(sa).sort();
+ charts[id]=new Chart(document.getElementById(id),{type:'bar',data:{labels,datasets:[{label:'Total Data',data:labels.map(k=>sa[k].total),backgroundColor:'#cbd5e1',borderRadius:6},{label:'Sudah FU',data:labels.map(k=>sa[k].follow),backgroundColor:'#60a5fa',borderRadius:6},{label:'Berhasil',data:labels.map(k=>sa[k].success),backgroundColor:'#34d399',borderRadius:6},{label:'Booking',data:labels.map(k=>sa[k].book),backgroundColor:'#a78bfa',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:9,padding:16}}},scales:{y:{beginAtZero:true,ticks:{precision:0,stepSize:1},grid:{color:'#eef2f7'}},x:{grid:{display:false}}}}});
+}
 function filteredRecords(){const q=document.getElementById('searchInput').value.toLowerCase(),st=document.getElementById('statusFilter').value,sa=document.getElementById('saFilter').value;return db.records.filter(r=>{const text=[r.plate,r.customer,r.vin,r.so,r.model].join(' ').toLowerCase();const okQ=!q||text.includes(q);const okSt=st==='all'||(st==='pending'&&!r.followedAt)||(st==='followed'&&r.followedAt)||(st==='booking'&&r.booking);const okSa=sa==='all'||r.sa===sa;return okQ&&okSt&&okSa})}
 function renderFollow(){const tbody=document.getElementById('followTableBody');const rows=filteredRecords();tbody.innerHTML=rows.length?rows.map(r=>`<tr><td><strong>${esc(r.plate||'-')}</strong></td><td>${esc(r.customer||'-')}</td><td>${esc(r.model||'-')}</td><td>${esc(r.sa||'-')}</td><td>${esc(r.mobile||'-')}</td><td>${r.booking?'<span class="badge booking">Booking</span>':r.followedAt&&r.result==='Berhasil dihubungi'?'<span class="badge success">Berhasil</span>':r.followedAt?'<span class="badge done">Sudah FU</span>':'<span class="badge pending">Belum FU</span>'}</td><td>${esc(r.result||r.reason||'-')}</td><td>${r.booking?esc((r.bookingDate||'')+' '+(r.bookingTime||'')):'-'}</td><td><button class="mini-btn" onclick="openFollow('${r.id}')">Follow Up</button></td></tr>`).join(''):`<tr><td colspan="9" style="text-align:center;padding:30px;color:#64748b">Belum ada data sesuai filter.</td></tr>`}
 ['searchInput','statusFilter','saFilter'].forEach(id=>document.getElementById(id).addEventListener(id==='searchInput'?'input':'change',renderFollow));
