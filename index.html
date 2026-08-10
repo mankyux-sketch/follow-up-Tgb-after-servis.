@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FOLLOW UP TGB AFTER SERVIS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">TGB</div>
+        <div><strong>FOLLOW UP TGB</strong><small>AFTER SERVIS</small></div>
+      </div>
+      <nav>
+        <button class="nav-btn active" data-view="dashboard">📊 Dashboard</button>
+        <button class="nav-btn" data-view="followup">💬 Follow Up</button>
+        <button class="nav-btn" data-view="upload">📥 Upload Data</button>
+        <button class="nav-btn" data-view="templates">📝 Template WA</button>
+      </nav>
+      <div class="sidebar-footer">Data tersimpan di browser perangkat ini.</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button id="menuToggle" class="icon-btn">☰</button>
+        <div>
+          <h1>FOLLOW UP TGB AFTER SERVIS</h1>
+          <p>Monitoring follow up customer, booking, dan keberhasilan tindak lanjut.</p>
+        </div>
+      </header>
+
+      <section id="dashboard" class="view active-view">
+        <div class="kpi-grid">
+          <article class="kpi"><span>Total Data</span><strong id="kpiTotal">0</strong><small>customer terupload</small></article>
+          <article class="kpi"><span>Sudah Follow Up</span><strong id="kpiFollowed">0</strong><small id="kpiFollowRate">0%</small></article>
+          <article class="kpi success"><span>Berhasil</span><strong id="kpiSuccess">0</strong><small id="kpiSuccessRate">0%</small></article>
+          <article class="kpi booking"><span>Booking</span><strong id="kpiBooking">0</strong><small id="kpiBookingRate">0%</small></article>
+          <article class="kpi pending"><span>Belum Follow Up</span><strong id="kpiPending">0</strong><small>perlu ditindaklanjuti</small></article>
+        </div>
+        <div class="chart-grid">
+          <article class="panel chart-panel"><div class="panel-title"><h3>Status Follow Up</h3></div><canvas id="statusChart"></canvas></article>
+          <article class="panel chart-panel"><div class="panel-title"><h3>Hasil Follow Up</h3></div><canvas id="reasonChart"></canvas></article>
+        </div>
+        <div class="chart-grid">
+          <article class="panel chart-panel wide"><div class="panel-title"><h3>Performa Service Advisor</h3></div><canvas id="saChart"></canvas></article>
+        </div>
+      </section>
+
+      <section id="followup" class="view">
+        <article class="panel">
+          <div class="panel-title split">
+            <div><h3>Daftar Follow Up</h3><p>Pilih customer, kirim WhatsApp, lalu simpan hasil follow up.</p></div>
+            <div class="toolbar">
+              <input id="searchInput" placeholder="Cari plat / customer / VIN / no. SO" />
+              <select id="statusFilter"><option value="all">Semua Status</option><option value="pending">Belum Follow Up</option><option value="followed">Sudah Follow Up</option><option value="booking">Booking</option></select>
+              <select id="saFilter"><option value="all">Semua SA</option></select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Plat</th><th>Customer</th><th>Model</th><th>SA</th><th>No. HP</th><th>Status</th><th>Reason</th><th>Booking</th><th>Aksi</th></tr></thead>
+              <tbody id="followTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="upload" class="view">
+        <div class="two-col">
+          <article class="panel">
+            <div class="panel-title"><h3>Upload Excel Mingguan</h3><p>Format .xlsx/.xls. Sistem membaca sheet pertama dan memetakan kolom utama secara otomatis.</p></div>
+            <label class="upload-box" for="excelFile"><div class="upload-icon">⬆</div><strong>Pilih file Excel</strong><span>atau klik area ini</span><input id="excelFile" type="file" accept=".xlsx,.xls" hidden /></label>
+            <div class="upload-actions"><select id="importMode"><option value="append">Tambahkan sebagai batch baru</option><option value="replace">Hapus semua data lama lalu import</option></select><button id="importBtn" class="primary" disabled>Import Data</button></div>
+            <div id="fileInfo" class="hint">Belum ada file dipilih.</div>
+          </article>
+          <article class="panel">
+            <div class="panel-title"><h3>Kolom yang Dibaca</h3></div>
+            <div class="mapping-list"><span>POLICE_NO → Plat</span><span>CUSTOMER → Customer</span><span>MODEL → Model</span><span>VIN / RANGKA → VIN</span><span>SERVICE_ORDER → No. SO</span><span>SERVICE_ADVISOR → SA</span><span>HANDPHONE / wa_cp → WhatsApp</span><span>Tgl_Invoice → Tanggal servis</span><span>BATTERY_CHECK → Battery Check</span></div>
+          </article>
+        </div>
+        <article class="panel batch-panel"><div class="panel-title"><h3>Riwayat Upload</h3><p>Setiap upload disimpan sebagai batch mingguan dan dapat dihapus tanpa mengganggu batch lain.</p></div><div id="batchList" class="batch-list"></div></article>
+      </section>
+
+      <section id="templates" class="view">
+        <div class="two-col">
+          <article class="panel">
+            <div class="panel-title"><h3>Tambah / Edit Template WhatsApp</h3><p>Gunakan variabel: {customer}, {plat}, {model}, {sa}, {tanggal_servis}.</p></div>
+            <input id="templateName" placeholder="Nama template" />
+            <textarea id="templateText" rows="9" placeholder="Isi pesan WhatsApp..."></textarea>
+            <input id="editingTemplateId" type="hidden" />
+            <div class="actions"><button id="cancelTemplateBtn" class="secondary">Batal</button><button id="saveTemplateBtn" class="primary">Simpan Template</button></div>
+          </article>
+          <article class="panel"><div class="panel-title"><h3>Daftar Template</h3></div><div id="templateList" class="template-list"></div></article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="followDialog">
+    <form method="dialog" class="dialog-card" id="followForm">
+      <div class="dialog-head"><div><h3 id="dlgCustomer">Customer</h3><p id="dlgVehicle"></p></div><button value="cancel" class="icon-btn">✕</button></div>
+      <input id="dlgRecordId" type="hidden" />
+      <label>Template WhatsApp<select id="dlgTemplate"></select></label>
+      <label>Preview Pesan<textarea id="dlgMessage" rows="7"></textarea></label>
+      <div class="dialog-actions"><button type="button" id="openWaBtn" class="wa-btn">💬 Buka WhatsApp</button></div>
+      <div class="divider"></div>
+      <label>Status hasil follow up<select id="dlgResult"><option value="">Pilih hasil</option><option value="Berhasil dihubungi">Berhasil dihubungi</option><option value="Tidak diangkat">Tidak diangkat</option><option value="Tidak dibalas">Tidak dibalas</option><option value="Nomor tidak aktif">Nomor tidak aktif</option><option value="Sudah service">Sudah service</option><option value="Belum waktunya">Belum waktunya</option><option value="Menolak">Menolak</option><option value="Lainnya">Lainnya</option></select></label>
+      <label>Reason / catatan<textarea id="dlgReason" rows="3" placeholder="Isi reason follow up..."></textarea></label>
+      <label class="check-row"><input id="dlgBooking" type="checkbox" /> Customer booking servis</label>
+      <div id="bookingFields" class="booking-fields hidden"><label>Tanggal booking<input id="dlgBookingDate" type="date" /></label><label>Jam booking<input id="dlgBookingTime" type="time" /></label></div>
+      <div class="actions"><button value="cancel" class="secondary">Tutup</button><button type="button" id="saveFollowBtn" class="primary">Simpan Follow Up</button></div>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
