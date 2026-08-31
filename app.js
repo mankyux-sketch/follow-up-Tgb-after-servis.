@@ -9,7 +9,15 @@ function phone(v){let s=clean(v).replace(/[^0-9]/g,'');if(s.startsWith('0'))s='6
 function get(row,names){for(const n of names){if(row[n]!=null&&clean(row[n])!=='')return row[n]}return ''}
 function normalize(row,batchId){return{id:uid('rec'),batchId,sourceData:{...row},plate:clean(get(row,['POLICE_NO','PLAT','PLAT_NO','NOPOL'])),customer:clean(get(row,['CUSTOMER','CUSTOMER_NAME','NAMA'])),model:clean(get(row,['MODEL','VEHICLE_MODEL'])),vin:clean(get(row,['VIN','RANGKA','NO_RANGKA'])),so:clean(get(row,['SERVICE_ORDER','SERVICE_ORDER_2','NO_ORDER'])),sa:clean(get(row,['SERVICE_ADVISOR','SA_SHEET2','SA'])),mobile:phone(get(row,['wa_cp','HANDPHONE','TELEPHONE_CP','TELEPHONE'])),serviceDate:clean(get(row,['Tgl_Invoice','TGL_MASUK','Arrival_Date'])),battery:clean(get(row,['BATTERY_CHECK'])),followedAt:'',result:'',reason:'',booking:false,bookingDate:'',bookingTime:''}}
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-function navigate(id){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active-view',v.id===id));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));if(id==='dashboard')renderDashboard();if(id==='download')renderDownload()}
+function navigate(id){
+ document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active-view',v.id===id));
+ document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));
+ if(id==='dashboard')renderDashboard();
+ if(id==='download'){
+   db=loadDB();
+   renderDownload();
+ }
+}
 document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>navigate(b.dataset.view));
 document.getElementById('menuToggle').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
 function renderAll(){renderFollow();renderBatches();renderTemplates();renderDashboard();renderSAFilter();renderDownload()}
@@ -81,11 +89,23 @@ document.getElementById('saveTemplateBtn').onclick=()=>{const name=document.getE
 
 /* ===== DOWNLOAD SEMUA DATA EXCEL ===== */
 function renderDownload(){
- const total=db.records.length;
- const followed=db.records.filter(r=>r.followedAt).length;
- set('dlTotal',total);set('dlFollowed',followed);set('dlPending',Math.max(total-followed,0));
+ // Selalu baca ulang DB yang sama persis dengan menu Follow Up.
+ db=loadDB();
+ const records=Array.isArray(db?.records)?db.records:[];
+ const total=records.length;
+ const followed=records.filter(r=>!!r.followedAt).length;
+ const pending=Math.max(total-followed,0);
+ set('dlTotal',total);
+ set('dlFollowed',followed);
+ set('dlPending',pending);
  const btn=document.getElementById('downloadAllBtn');
  if(btn)btn.disabled=!total;
+ const info=document.getElementById('downloadInfo');
+ if(info){
+   info.textContent=total
+     ? `Siap download ${total} data: ${followed} sudah follow up dan ${pending} belum follow up.`
+     : 'Belum ada data yang terbaca. Buka menu Follow Up lalu kembali ke Download Excel.';
+ }
 }
 function formatFollowDate(value){
  if(!value)return '';
@@ -122,9 +142,11 @@ function buildExportRow(r){
  };
 }
 document.getElementById('downloadAllBtn').onclick=()=>{
- if(!db.records.length)return alert('Belum ada data untuk di-download.');
+ db=loadDB();
+ const records=Array.isArray(db?.records)?db.records:[];
+ if(!records.length)return alert('Belum ada data untuk di-download.');
  try{
-   const rows=db.records.map(buildExportRow);
+   const rows=records.map(buildExportRow);
    const ws=XLSX.utils.json_to_sheet(rows);
    const range=XLSX.utils.decode_range(ws['!ref']);
    ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:range.e.r,c:range.e.c}})};
@@ -136,11 +158,15 @@ document.getElementById('downloadAllBtn').onclick=()=>{
    const pad=n=>String(n).padStart(2,'0');
    const filename=`HASIL_FOLLOW_UP_TGB_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}.xlsx`;
    XLSX.writeFile(wb,filename);
-   document.getElementById('downloadInfo').textContent=`Download berhasil: ${rows.length} data (${db.records.filter(r=>r.followedAt).length} sudah FU, ${db.records.filter(r=>!r.followedAt).length} belum FU).`;
+   document.getElementById('downloadInfo').textContent=`Download berhasil: ${rows.length} data (${records.filter(r=>r.followedAt).length} sudah FU, ${records.filter(r=>!r.followedAt).length} belum FU).`;
  }catch(err){
    console.error(err);
    alert('Gagal membuat file Excel. Silakan coba lagi.');
  }
 };
+
+// Sinkronisasi tambahan: berguna bila browser menahan halaman/cache lama.
+window.addEventListener('pageshow',()=>{db=loadDB();renderAll();});
+window.addEventListener('storage',(e)=>{if(e.key===DB_KEY){db=loadDB();renderAll();}});
 
 renderAll();

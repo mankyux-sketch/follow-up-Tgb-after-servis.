@@ -26,3 +26,9 @@ Cukup buka `index.html` melalui web server. Untuk GitHub Pages, upload seluruh f
 
 ## Penyimpanan
 Data disimpan di `localStorage` browser/perangkat yang digunakan. Jangan commit file Excel customer atau data nomor HP/VIN ke repository publik.
+
+
+## V2 Sync Fix
+- Menu Download selalu membaca ulang `tgb_followup_db_v1`, database yang sama dengan menu Follow Up.
+- `app.js` dan `style.css` memakai cache-busting version query agar browser tidak menjalankan file lama.
+- Data follow up yang sudah tersimpan tidak dihapus dan tidak perlu upload ulang.
