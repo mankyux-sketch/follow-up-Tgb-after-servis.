@@ -20,6 +20,7 @@
         <button class="nav-btn active" data-view="dashboard">📊 Dashboard</button>
         <button class="nav-btn" data-view="followup">💬 Follow Up</button>
         <button class="nav-btn" data-view="upload">📥 Upload Data</button>
+        <button class="nav-btn" data-view="download">📤 Download Excel</button>
         <button class="nav-btn" data-view="templates">📝 Template WA</button>
       </nav>
       <div class="sidebar-footer">Data tersimpan di browser perangkat ini.</div>
@@ -84,6 +85,38 @@
           </article>
         </div>
         <article class="panel batch-panel"><div class="panel-title"><h3>Riwayat Upload</h3><p>Setiap upload disimpan sebagai batch mingguan dan dapat dihapus tanpa mengganggu batch lain.</p></div><div id="batchList" class="batch-list"></div></article>
+      </section>
+
+      <section id="download" class="view">
+        <div class="download-grid">
+          <article class="panel download-card">
+            <div class="download-icon-big">📤</div>
+            <div class="panel-title">
+              <h3>Download Semua Data Excel</h3>
+              <p>Download seluruh customer, baik yang SUDAH maupun BELUM follow up. Data hasil follow up dan reason ikut ditambahkan ke Excel.</p>
+            </div>
+
+            <div class="download-summary">
+              <div><span>Total Data</span><strong id="dlTotal">0</strong></div>
+              <div><span>Sudah Follow Up</span><strong id="dlFollowed">0</strong></div>
+              <div><span>Belum Follow Up</span><strong id="dlPending">0</strong></div>
+            </div>
+
+            <div class="export-columns">
+              <strong>Kolom hasil follow up yang ditambahkan:</strong>
+              <span>STATUS_FOLLOW_UP</span>
+              <span>HASIL_FOLLOW_UP</span>
+              <span>REASON_FOLLOW_UP</span>
+              <span>TANGGAL_FOLLOW_UP</span>
+              <span>BOOKING</span>
+              <span>TANGGAL_BOOKING</span>
+              <span>JAM_BOOKING</span>
+            </div>
+
+            <button id="downloadAllBtn" class="primary download-btn">⬇ Download Semua Data (.xlsx)</button>
+            <div id="downloadInfo" class="hint">Semua baris akan ikut ter-download. Yang belum follow up akan diberi status BELUM FOLLOW UP.</div>
+          </article>
+        </div>
       </section>
 
       <section id="templates" class="view">
